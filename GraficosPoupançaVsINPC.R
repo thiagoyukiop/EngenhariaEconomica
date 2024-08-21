@@ -1,50 +1,91 @@
 library(dplyr)
 library(tidyverse)
-library(plotly)
+
 
 INPC <- read.csv("indice.csv", header = T, sep = ";")
 
 INPC10anos <- INPC %>% 
-  filter(Ano < 2024 & Ano > 2012)
+  filter(Ano < 2024 & Ano > 2012) %>% 
+  dplyr::select(c(Ano, TaxaAnual)) 
 
-Poup <- read.csv("table_data.csv", header = T, sep = ",")
 
-Poup10anos <- Poup %>% 
-  filter(Ano < 2024 & Ano > 2012)
 
 INPC10anos <- INPC10anos %>% 
-  select(c(Ano,TaxaAnual))
-
-resultado <- Poup10anos %>%
-  pivot_longer(
-    cols = Jan:Dez,  # Define o intervalo de colunas que representam os meses
-    names_to = "MES",  # Nome da nova coluna que representará o mês
-    values_to = "taxa"  # Nome da coluna que conterá os valores
-  ) %>%
   mutate(
-    MES = recode(MES,
-                 jan = 'Jan',
-                 fev = 'Fev',
-                 mar = 'Mar',
-                 abr = 'Abr',
-                 mai = 'Mai',
-                 jun = 'Jun',
-                 jul = 'Jul',
-                 ago = 'Ago',
-                 set = 'Set',
-                 out = 'Out',
-                 nov = 'Nov',
-                 dez = 'Dez'),
-    taxa = gsub("%", "", taxa),
-    taxa = gsub(",", ".", taxa),
-    taxa = as.numeric(taxa)
-  )
+    TaxaAnual = gsub("%", "", TaxaAnual),
+    TaxaAnual = gsub(",", ".", TaxaAnual),
+    TaxaAnual = as.numeric(TaxaAnual),
+    Indicadores = "INPC"
+  ) 
+# Dados para o data frame
+# https://www.remessaonline.com.br/blog/rendimento-da-poupanca-saiba-quanto-rende-de-juros-hoje/
 
-teste <- resultado %>%
-  group_by(Ano) %>% 
-  summarise(
-    TaxaAnual = round(( (1 + mean(taxa))^12 - 1 ),2)
-  )
+Poup10anos <- data.frame(
+  Ano = c(2013:2023),
+  TaxaAnual = c(6.37, 7.16, 8.15, 8.30, 6.61, 4.62, 4.26, 2.11, 2.94, 7.89, 8.03)
+)
 
-teste2 <- resultado %>% 
-  filter()
+Poup10anos <- Poup10anos %>% 
+  mutate(Indicadores = "Poupança")
+
+dados <- merge(INPC10anos, Poup10anos, all = TRUE)
+
+library(shiny)
+library(plotly)
+library(shinydashboard)
+library(shinydashboardPlus)
+
+ui <- dashboardPage(
+  header = dashboardHeader(),
+  sidebar = dashboardSidebar(disable = T),
+  body = dashboardBody(
+    # h1("Índices de inflação e de rendimento de aplicações"),
+    # plotlyOutput("INPC_Poupanca")
+    box(
+      title = strong("Índices de inflação e de rendimento de aplicações"),
+      solidHeader = TRUE,
+      status = "primary",
+      width = 12,
+      plotlyOutput("INPC_Poupanca")
+    )
+  ),
+  controlbar = dashboardControlbar(disable = T)
+)
+
+server <- function(input, output, session) {
+  output$INPC_Poupanca <- renderPlotly({
+    plot_ly(
+      data = dados,
+      x = ~Ano,
+      y = ~TaxaAnual,
+      type = 'scatter',
+      mode = 'lines+markers',
+      color = ~Indicadores,
+      # colors = cores,
+      marker = list(size = 10), # Tamanho do Marcador
+      hoverinfo = "text",
+      text = ~paste(
+        " Indicador: ", Indicadores, "<br>",
+        "Taxa Anual: ", TaxaAnual, "%"
+      )
+    ) %>% 
+      layout(
+        title = "INPC x Poupança",
+        xaxis = list(
+          title = "Ano",
+          tickvals = unique(dados$Ano),
+          ticktext = unique(dados$Ano)#,
+          # showgrid = FALSE
+        ),
+        yaxis = list(
+          title = "Taxa Anual",
+          # showgrid = FALSE,
+          ticksuffix = "%"
+        ),
+        showlegend = FALSE,
+        hovermode = "x"
+      )
+  })
+}
+
+shinyApp(ui, server)
