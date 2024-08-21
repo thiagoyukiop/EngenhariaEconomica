@@ -39,8 +39,6 @@ ui <- dashboardPage(
   header = dashboardHeader(),
   sidebar = dashboardSidebar(disable = T),
   body = dashboardBody(
-    # h1("Índices de inflação e de rendimento de aplicações"),
-    # plotlyOutput("INPC_Poupanca")
     box(
       title = strong("Índices de inflação e de rendimento de aplicações"),
       solidHeader = TRUE,
@@ -61,7 +59,6 @@ server <- function(input, output, session) {
       type = 'scatter',
       mode = 'lines+markers',
       color = ~Indicadores,
-      # colors = cores,
       marker = list(size = 10), # Tamanho do Marcador
       hoverinfo = "text",
       text = ~paste(
