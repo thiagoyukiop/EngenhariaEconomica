@@ -2,6 +2,29 @@ library(dplyr)
 library(tidyverse)
 library(readxl)
 
+
+# Dados com Inflação ------------------------------------------------------
+
+
+dados_gerais <- read.csv("poupanca_inpc_ano.csv", header = T, sep = ";")
+
+dados_gerais <- dados_gerais %>% 
+  mutate(
+    RentabilidadeNominal = gsub(",", ".", RentabilidadeNominal),
+    Inflacao = gsub(",", ".", Inflacao),
+    JurosReal = gsub(",", ".", JurosReal),
+    JurosReal100 = gsub(",", ".", JurosReal100),
+    RentabilidadeNominal = as.numeric(RentabilidadeNominal),
+    Inflacao = as.numeric(Inflacao),
+    JurosReal = as.numeric(JurosReal),
+    JurosReal100 = as.numeric(JurosReal100),
+    JurosReal = round(JurosReal,4),
+    JurosReal100 = round(JurosReal100,4)
+    )
+
+# dados_gerais <- dados_gerais %>% 
+#   mutate(teste = ((1+RentabilidadeNominal/100)/(1+Inflacao/100))-1)
+
 # Dados por Mes -----------------------------------------------------------
 
 meses <- c("Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez")
@@ -38,6 +61,9 @@ INPC_mes <- INPC %>%
 
 
 Poup <- read_xlsx("Poupanca_2013_2023.xlsx")
+
+Poup <- Poup %>% 
+  mutate(Jan)
 
 Poup_mes <- Poup %>%
   pivot_longer(
@@ -121,7 +147,7 @@ ui <- dashboardPage(
       column(
         width = 12,
         box(
-          title = strong("Índices de inflação e de rendimento de aplicações"),
+          title = strong("Índices de inflação e de rendimento de aplicações financeiras"),
           solidHeader = TRUE,
           status = "primary",
           width = 12,
@@ -183,6 +209,39 @@ server <- function(input, output, session) {
           title = "Ano",
           tickvals = unique(dados_ano$Ano),
           ticktext = unique(dados_ano$Ano)#,
+          # showgrid = FALSE
+        ),
+        yaxis = list(
+          title = "Taxa Anual",
+          # showgrid = FALSE,
+          ticksuffix = "%"
+        ),
+        # showlegend = FALSE,
+        hovermode = "x"
+      )
+  })
+  
+  output$JurosReal <- renderPlotly({
+    plot_ly(
+      data = dados_gerais,
+      x = ~Ano,
+      y = ~JurosReal100,
+      type = 'scatter',
+      mode = 'lines+markers',
+      color = ~Indicadores,
+      marker = list(size = 10), # Tamanho do Marcador
+      hoverinfo = "text",
+      text = ~paste(
+        " Indicador: ", Indicadores, "<br>",
+        "Taxa Anual: ", JurosReal100, "%"
+      )
+    ) %>% 
+      layout(
+        title = "INPC x Poupança",
+        xaxis = list(
+          title = "Ano",
+          tickvals = unique(dados_gerais$Ano),
+          ticktext = unique(dados_gerais$Ano)#,
           # showgrid = FALSE
         ),
         yaxis = list(
@@ -278,6 +337,8 @@ server <- function(input, output, session) {
         showlegend = F
       )
   })
+  
+
   
 }
 
